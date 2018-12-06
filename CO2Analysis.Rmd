@@ -1,0 +1,205 @@
+---
+title: "CO2Analysis"
+author: "Bob Hollen"
+date: "December 5, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE)
+library(tidyverse)
+library(ggplot2)
+```
+
+## CO2 Emissions from https://www.iea.org/
+
+The data was downloaded from the https://www.iea.org/ website on 25-Nov-2018 triggered from 
+an article in the New York Times regarding the failure to divest from coal-fired power in the 
+world.
+
+```{r Input_CO2_Data, warning=FALSE, error=FALSE, messages=FALSE}
+csv_co2_FuelCombustion <- read_csv(file="Data/CO2_FuelCombustion.csv", 
+                                na = c("", "NA", ".."),
+                                guess_max = 10)
+csv_co2_Coal <- read_csv(file="Data/CO2_Coal.csv", 
+                                na = c("", "NA", ".."),
+                                guess_max = 10)
+csv_co2_GDP <- read_csv(file="Data/CO2_GDP.csv", 
+                                na = c("", "NA", ".."),
+                                guess_max = 10)
+
+yearsInData <- colnames(csv_co2_FuelCombustion)
+len_yearsInData <- length(yearsInData)
+yearValues <- as.integer(yearsInData[2:len_yearsInData])
+rm(yearsInData)
+rm(len_yearsInData)
+```
+
+```{r CreateDataFrames_CO2, warning=FALSE}
+tmpVar <- csv_co2_FuelCombustion %>%
+  select(-'Region/Country/Economy')
+df_co2_FuelCombustion <- as.data.frame(t(tmpVar))
+colnames(df_co2_FuelCombustion) <- csv_co2_FuelCombustion$`Region/Country/Economy`
+df_co2_FuelCombustion <- df_co2_FuelCombustion %>%
+  mutate(Year=yearValues)
+
+tmpVar <- csv_co2_Coal %>%
+  select(-'Region/Country/Economy')
+df_co2_Coal <- as.data.frame(t(tmpVar))
+colnames(df_co2_Coal) <- csv_co2_Coal$`Region/Country/Economy`
+df_co2_Coal <- df_co2_Coal %>%
+  mutate(Year=yearValues)
+
+tmpVar <- csv_co2_GDP %>%
+  select(-'Region/Country/Economy')
+df_co2_GDP <- as.data.frame(t(tmpVar))
+colnames(df_co2_GDP) <- csv_co2_GDP$`Region/Country/Economy`
+df_co2_GDP <- df_co2_GDP %>%
+  mutate(Year=yearValues)
+
+rm(tmpVar)
+```
+
+```{r Calculate_Maximum_Values, warning=FALSE}
+maxCoal <- vector("double", ncol(df_co2_Coal))
+for (i in seq_along(df_co2_Coal)) {
+  maxCoal[[i]] <- max(df_co2_Coal[[i]])
+}
+maxFC <- vector("double", ncol(df_co2_FuelCombustion))
+for (i in seq_along(df_co2_FuelCombustion)) {
+  maxFC[[i]] <- max(df_co2_FuelCombustion[[i]])
+}
+
+```
+
+```{r CalculateRates}
+chinaRate1 <- as.integer((2965-789)/30)
+chinaRate2 <- as.integer((9101-2965)/16)
+indiaRate1 <- as.integer((884-181)/30)
+indiaRate2 <- as.integer((2076-884)/16)
+```
+
+# Trends in the Top Three CO2 Fuel Consumption Countries
+
+Since 2005 the United States has attempted to reduce the amount of CO2 emission from fuel consumption.  Here is a graph of the CO2 emission from the U.S. since 1970 where the trend started to reverse after the year 2000.  Over the course of the observation period the CO2 production raised from 4200 to a maximum of 5800 million tons, only to drop to about 4800 million tons after the year 2000.
+
+China increased from 790 million tons per year in 1970 at a rate of approximately `r chinaRate1`  million tons per year up through 2000 with a production of 2965 million tons.  From 2000 to 2016 this rate increased at `r chinaRate2` million tons per year to a 2016 value of 9100 million tons. India increased from 181 million tons per year in 1970 at a rate of approximately `r indiaRate1`  million tons per year up through 2000 with a production of 884 million tons.  From 2000 to 2016 this rate increased at `r indiaRate2` million tons per year to a 2016 value of 2076 million tons.
+
+
+```{r ExtractAndPlotData_CO2_FC, warning=FALSE}
+df_co2_FuelCombustion %>% ggplot(aes(x=Year,y=`United States`)) + 
+  geom_line(color="darkblue") + 
+  theme_light() +
+  theme(legend.position="bottom") +
+  labs(x="Year", y="CO2 Production [million tons]", title="United States", subtitle="CO2 Emission from Fuel Consumption", caption="Data from http://www.iea.org")
+
+df_co2_FuelCombustion %>% ggplot(aes(x=Year,y=`China (incl. Hong Kong, China)`)) + 
+  geom_line(color="darkblue") + 
+  theme_light() +
+  theme(legend.position="bottom") +
+  labs(x="Year", y="CO2 Production [million tons]", title="China (incl. Hong Kong, China)", subtitle="CO2 Emission from Fuel Consumption", caption="Data from http://www.iea.org") 
+
+df_co2_FuelCombustion %>% ggplot(aes(x=Year,y=`India`)) + 
+  geom_line(color="darkblue") + 
+  theme_light() +
+  theme(legend.position="bottom") +
+  labs(x="Year", y="CO2 Production [million tons]", title="India", subtitle="CO2 Emission from Fuel Consumption", caption="Data from http://www.iea.org") 
+```
+
+CO2 emission from coal, which has been steadily increasing from 1970 until 2005, began to 
+reduce sharply since 2005.
+
+```{r ExtractAndPlotUSData_CO2_Coal, warning=FALSE}
+df_co2_Coal %>% ggplot(aes(x=Year,y=`United States`)) + 
+  geom_line(color="darkblue") + 
+  theme_light() +
+  theme(legend.position="bottom") +
+  labs(x="Year", y="CO2 Production", title="United States", subtitle="CO2 Emission from Coal", caption="Data from http://www.iea.org")
+```
+
+Here are the countries that are the top ten CO2 emission producers throughout the recording period of 1970 through 2016.
+
+```{r FC_TopTenCO2EmissionCountries}
+df_co2_FuelCombustion %>% ggplot(aes(x=Year)) +
+  geom_line(mapping=aes(y=`China (incl. Hong Kong, China)`, color="China (incl. Hong Kong, China)")) + 
+  geom_line(mapping=aes(y=`United States`, color="United States")) + 
+  geom_line(mapping=aes(y=`India`, color="India")) + 
+  geom_line(mapping=aes(y=`Japan`, color="Japan")) + 
+  geom_line(mapping=aes(y=`Germany`, color="Germany")) + 
+  geom_line(mapping=aes(y=`United Kingdom`, color="United Kingdom")) + 
+  geom_line(mapping=aes(y=`Korea`, color="Korea")) + 
+  geom_line(mapping=aes(y=`Islamic Rep. of Iran`, color="Islamic Rep. of Iran")) + 
+  geom_line(mapping=aes(y=`Canada`, color="Canada")) + 
+  geom_line(mapping=aes(y=`Saudi Arabia`, color="Saudi Arabia")) + 
+  theme_light() +
+  labs(x="Year", y="CO2 Production", title="Top Ten CO2 Emission Producers", subtitle="CO2 Emission from Fuel Consumption", caption="Data from http://www.iea.org")
+```
+
+
+```{r}
+df_co2_Coal %>% ggplot(aes(x=Year,y=`China (incl. Hong Kong, China)`)) + 
+  geom_line(color="darkblue") + 
+  theme_light() +
+  theme(legend.position="bottom") +
+  labs(x="Year", y="CO2 Production", title="China (incl. Hong Kong, China)", subtitle="CO2 Emission from Coal", caption="Data from http://www.iea.org") 
+```
+
+For the top three CO2 producing countries I wanted to see the ratio of the CO2 production per the country's GDP.  Here are the graphs from CO2/GDP:
+
+```{r CO2_per_GDP_Plots, warning=FALSE, error=FALSE}
+df_co2_GDP %>% ggplot(aes(x=Year,y=`United States`)) + 
+  geom_line(color="darkblue") + 
+  theme_light() +
+  theme(legend.position="bottom") +
+  labs(x="Year", y="CO2/GDP", title="United States", subtitle="CO2 Emission per GDP from Fuel Consumption", caption="Data from http://www.iea.org")
+
+df_co2_GDP %>% ggplot(aes(x=Year,y=`China (incl. Hong Kong, China)`)) + 
+  geom_line(color="darkblue") + 
+  theme_light() +
+  theme(legend.position="bottom") +
+  labs(x="Year", y="CO2/GDP", title="China (incl. Hong Kong, China)", subtitle="CO2 Emission per GDP from Fuel Consumption", caption="Data from http://www.iea.org") 
+
+df_co2_GDP %>% ggplot(aes(x=Year,y=`India`)) + 
+  geom_line(color="darkblue") + 
+  theme_light() +
+  theme(legend.position="bottom") +
+  labs(x="Year", y="CO2/GDP", title="India", subtitle="CO2 Emission per GDP from Fuel Consumption", caption="Data from http://www.iea.org") 
+```
+
+I'd like to experiment with pulling out the data for a regression of the data.  I'll start first with determining the fit for the US CO2/GDP above, which appears to be a decent negative sloping line fit.
+
+```{r Extract_two_blocks_of_Data}
+usCO2GDP_Region1 <- df_co2_GDP %>% 
+  select(Year, "United States") %>% 
+  filter(Year <= 1986) %>%
+  mutate(t=Year-1971) %>% 
+  rename("CO2_GDP"="United States")
+
+usCO2GDP_Region2 <- df_co2_GDP %>% 
+  select(Year, "United States") %>% 
+  filter(Year >= 1986) %>%
+  mutate(t=Year-1971) %>% 
+  rename("CO2_GDP"="United States")
+```
+
+```{r Calc_Linear_Models}
+coefRegion1 <- coef(lm(CO2_GDP~t, data=usCO2GDP_Region1))
+coefRegion2 <- coef(lm(CO2_GDP~t, data=usCO2GDP_Region2))
+```
+
+```{r Construct_Line_Segments_in_DF}
+usCO2GDP_Region1 <- usCO2GDP_Region1 %>%
+  mutate(FitVals=t*coefRegion1[2]+coefRegion1[1])
+usCO2GDP_Region2 <- usCO2GDP_Region2 %>%
+  mutate(FitVals=t*coefRegion2[2]+coefRegion2[1])
+```
+
+```{r PlotAllUSData_PlusModelLines}
+df_co2_GDP %>% ggplot() + 
+  geom_point(mapping=aes(x=Year,y=`United States`), color="darkblue") + 
+  theme_light() +
+  theme(legend.position="bottom") +
+  labs(x="Year", y="CO2/GDP", title="United States", subtitle="CO2 Emission per GDP from Fuel Consumption", caption="Data from http://www.iea.org") +
+  geom_line(data=usCO2GDP_Region1, mapping=aes(x=Year, y=FitVals)) +
+  geom_line(data=usCO2GDP_Region2, mapping=aes(x=Year, y=FitVals))
+```
